@@ -54,7 +54,8 @@ In other words, it's less "figure it out yourself" delegation and more **a brake
 Repeated tasks are split out as slash commands.
 
 - `new-feature.md` — reads the module structure before implementing a feature, and proposes an implementation order first
-- `commit.md` — analyzes staged changes, drafts a commit message, and decides whether commits should be split
+- `commit.md` — analyzes staged changes and drafts a commit message (judgment rules live in the `commit-pr` skill)
+- `pr.md` — opens a draft PR from the current branch's commits, filling in the Jira ticket, commit list, and change summary (judgment rules live in the `commit-pr` skill)
 - `pr-review.md` — reviews the current branch's changes against an architecture checklist
 - `migration-check.md` — only reports whether an Entity change actually needs a migration
 
@@ -86,7 +87,7 @@ skills/<name>/
    └─ <validation>.sh
 ```
 
-There are two skills right now.
+There are three skills right now.
 
 - **`refactoring/`** — splits refactoring into two phases.
   - `references/phase1-safe-changes.md` — changes with no frontend impact that can be applied immediately (DTO separation, Swagger cleanup, moving existing validation into class-validator)
@@ -95,8 +96,12 @@ There are two skills right now.
 - **`entity-migration/`** — splits Entity changes by risk.
   - `references/add-column.md` / `drop-or-type-change.md` / `relation-and-index.md`
   - `scripts/check-entity-diff.sh` — heuristically surfaces column/relation/index changes from the `src/entities/` diff
+- **`commit-pr/`** — splits into two moments: writing a commit message and writing a PR body.
+  - `references/commit-message.md` — type/scope judgment, split-commit decisions, the English-description rule (Steps 1–6)
+  - `references/pr-description.md` — rules for a draft PR body that carries the Jira ticket, commit list, and change summary
+  - `scripts/collect-pr-context.sh` — gathers the branch, ticket ID, commit list, and file-change stats in one shot
 
-The reason refactoring is split into two phases is simple: bundling everything under the label "refactoring" makes "safe cleanup" and "contract change" bleed into each other. Entity changes are the same — adding a column and dropping/retyping one carry different risk. Splitting by type keeps the AI from **quietly widening the scope of a change**, and it only reads the one reference file that matches the type at hand.
+The reason refactoring is split into two phases is simple: bundling everything under the label "refactoring" makes "safe cleanup" and "contract change" bleed into each other. Entity changes are the same — adding a column and dropping/retyping one carry different risk. `commit-pr` splits along a different axis — not risk-by-type, but **stage of work** (commit vs. PR). Splitting by type keeps the AI from **quietly widening the scope of a change**, and it only reads the one reference file that matches the situation at hand.
 
 ---
 
@@ -212,6 +217,7 @@ Examples:
 - `/migration-check` — judge whether an Entity change needs a migration
 - `/pr-review` — review the whole current branch against a checklist
 - `/commit` — analyze staged changes and draft a commit message
+- `/pr` — open a draft PR from the current branch's commits (Jira ticket, commit list, change summary included)
 
 ### 3. Skills trigger on their own, or you call them directly
 
@@ -256,7 +262,8 @@ These principles trace back to the mindset I got from `andrej-karpathy-skills`, 
 │  ├─ commit.md
 │  ├─ migration-check.md
 │  ├─ new-feature.md
-│  └─ pr-review.md
+│  ├─ pr-review.md
+│  └─ pr.md
 ├─ hooks/
 │  ├─ post-edit-test.sh
 │  ├─ post-edit-typecheck.sh
@@ -270,14 +277,21 @@ These principles trace back to the mindset I got from `andrej-karpathy-skills`, 
    │  │  └─ phase2-contract-changes.md
    │  └─ scripts/
    │     └─ validate.sh
-   └─ entity-migration/
+   ├─ entity-migration/
+   │  ├─ SKILL.md
+   │  ├─ references/
+   │  │  ├─ add-column.md
+   │  │  ├─ drop-or-type-change.md
+   │  │  └─ relation-and-index.md
+   │  └─ scripts/
+   │     └─ check-entity-diff.sh
+   └─ commit-pr/
       ├─ SKILL.md
       ├─ references/
-      │  ├─ add-column.md
-      │  ├─ drop-or-type-change.md
-      │  └─ relation-and-index.md
+      │  ├─ commit-message.md
+      │  └─ pr-description.md
       └─ scripts/
-         └─ check-entity-diff.sh
+         └─ collect-pr-context.sh
 ```
 
 ---
