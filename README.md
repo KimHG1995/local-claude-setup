@@ -54,7 +54,8 @@ Claude Code를 계속 쓰다 보면 문제는 비슷하게 반복된다.
 반복되는 작업은 슬래시 커맨드 단위로 분리해뒀다.
 
 - `new-feature.md` — 기능 구현 전에 모듈 구조를 읽고, 구현 순서를 먼저 제안하게 함
-- `commit.md` — 스테이징된 변경을 분석해서 커밋 메시지를 초안하고, 커밋 분리까지 판단하게 함
+- `commit.md` — 스테이징된 변경을 분석해서 커밋 메시지를 초안하게 함 (판단 규칙은 `commit-pr` 스킬을 따름)
+- `pr.md` — 현재 브랜치 커밋으로 draft PR을 만들게 함, Jira 티켓·커밋 목록·수정내역까지 본문에 채움 (판단 규칙은 `commit-pr` 스킬을 따름)
 - `pr-review.md` — 현재 브랜치 변경을 아키텍처 체크리스트 기준으로 검토하게 함
 - `migration-check.md` — Entity 변경이 실제 마이그레이션이 필요한 변경인지 보고만 하게 함
 
@@ -86,7 +87,7 @@ skills/<이름>/
    └─ <검증>.sh
 ```
 
-현재 스킬은 둘이다.
+현재 스킬은 셋이다.
 
 - **`refactoring/`** — 리팩토링을 두 단계로 나눈다.
   - `references/phase1-safe-changes.md` — 프론트엔드 영향 없이 바로 적용 가능한 변경 (DTO 분리, Swagger 정리, 기존 검증의 class-validator 이동)
@@ -95,8 +96,12 @@ skills/<이름>/
 - **`entity-migration/`** — Entity 변경을 위험도별로 나눈다.
   - `references/add-column.md` / `drop-or-type-change.md` / `relation-and-index.md`
   - `scripts/check-entity-diff.sh` — `src/entities/` diff에서 컬럼·관계·인덱스 변경 후보를 휴리스틱으로 뽑아 보여줌
+- **`commit-pr/`** — 커밋 메시지와 PR 본문, 두 상황으로 나눈다.
+  - `references/commit-message.md` — 타입·스코프 판단, 분리 여부, 영어 설명 규칙 (Step 1~6 절차)
+  - `references/pr-description.md` — Jira 티켓 연동, 커밋 목록, 수정내역을 담은 draft PR 작성 규칙
+  - `scripts/collect-pr-context.sh` — 브랜치·티켓 번호·커밋 목록·변경 파일 통계를 한 번에 수집
 
-리팩토링을 두 단계로 나눈 이유는 단순하다. "리팩토링"이라는 이름으로 한 번에 밀어붙이면, 실제로는 "안전한 정리"와 "계약 변경"이 쉽게 뒤섞인다. Entity 변경도 마찬가지다 — 컬럼 추가와 컬럼 삭제·타입 변경은 위험도 자체가 다르다. 유형별로 갈라두면 AI도 **수정 범위를 괜히 키우지 않고**, 지금 유형에 필요한 참조 파일 하나만 읽고 움직인다.
+리팩토링을 두 단계로 나눈 이유는 단순하다. "리팩토링"이라는 이름으로 한 번에 밀어붙이면, 실제로는 "안전한 정리"와 "계약 변경"이 쉽게 뒤섞인다. Entity 변경도 마찬가지다 — 컬럼 추가와 컬럼 삭제·타입 변경은 위험도 자체가 다르다. `commit-pr`은 결이 좀 다르다 — 유형별 위험도가 아니라 **작업 단계**(커밋 vs PR)로 가른 경우다. 유형별로 갈라두면 AI도 **수정 범위를 괜히 키우지 않고**, 지금 상황에 필요한 참조 파일 하나만 읽고 움직인다.
 
 ---
 
@@ -216,6 +221,7 @@ skills/<이름>/
 - `/migration-check` — Entity 변경이 마이그레이션 대상인지 판단하기
 - `/pr-review` — 현재 브랜치 전체를 체크리스트로 리뷰하기
 - `/commit` — 스테이징된 변경을 분석해 커밋 메시지 만들기
+- `/pr` — 현재 브랜치 커밋으로 draft PR 열기 (Jira 티켓·커밋 목록·수정내역 포함)
 
 ### 3. 스킬은 알아서 트리거되거나, 직접 불러서 쓴다
 
@@ -260,7 +266,8 @@ skills/<이름>/
 │  ├─ commit.md
 │  ├─ migration-check.md
 │  ├─ new-feature.md
-│  └─ pr-review.md
+│  ├─ pr-review.md
+│  └─ pr.md
 ├─ hooks/
 │  ├─ post-edit-test.sh
 │  ├─ post-edit-typecheck.sh
@@ -274,14 +281,21 @@ skills/<이름>/
    │  │  └─ phase2-contract-changes.md
    │  └─ scripts/
    │     └─ validate.sh
-   └─ entity-migration/
+   ├─ entity-migration/
+   │  ├─ SKILL.md
+   │  ├─ references/
+   │  │  ├─ add-column.md
+   │  │  ├─ drop-or-type-change.md
+   │  │  └─ relation-and-index.md
+   │  └─ scripts/
+   │     └─ check-entity-diff.sh
+   └─ commit-pr/
       ├─ SKILL.md
       ├─ references/
-      │  ├─ add-column.md
-      │  ├─ drop-or-type-change.md
-      │  └─ relation-and-index.md
+      │  ├─ commit-message.md
+      │  └─ pr-description.md
       └─ scripts/
-         └─ check-entity-diff.sh
+         └─ collect-pr-context.sh
 ```
 
 ---

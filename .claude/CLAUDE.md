@@ -13,6 +13,7 @@
 | 파일                                  | 커맨드             | 역할                          |
 | ------------------------------------- | ------------------ | ----------------------------- |
 | `.claude/commands/commit.md`          | `/commit`          | 커밋 메시지 초안·실행         |
+| `.claude/commands/pr.md`              | `/pr`              | draft PR 생성 (Jira 연동·커밋 목록·수정내역 포함) |
 | `.claude/commands/pr-review.md`       | `/pr-review`       | PR 체크리스트 리뷰            |
 | `.claude/commands/migration-check.md` | `/migration-check` | Entity 변경 마이그레이션 분석 |
 | `.claude/commands/new-feature.md`     | `/new-feature`     | 기능 구현 전 계획 수립        |
@@ -25,6 +26,7 @@
 | ------------------------------------ | ------------------------------------------------------------- |
 | `.claude/skills/refactoring/`        | 리팩토링 시 — 1단계(안전) / 2단계(계약 변경) 유형부터 판단   |
 | `.claude/skills/entity-migration/`   | Entity 파일 수정 전후 — 마이그레이션 필요 여부·위험 판단     |
+| `.claude/skills/commit-pr/`          | 커밋 메시지 작성 시 / PR 생성 시 — 둘 중 해당하는 유형만 판단 |
 
 ### 설정
 
@@ -60,6 +62,7 @@
 ### 절대 금지 (명시적 요청 없으면)
 
 - `git commit`, `git push`
+- PR 생성(`gh pr create`) — 생성하더라도 항상 draft, Open 전환은 사람이 함
 - `.env*` 파일 수정
 - `migrations/` 파일 직접 편집·삭제
 - 전역 리팩토링 (수정 대상 모듈 범위 밖 변경)
@@ -94,6 +97,7 @@
 
 - **담당자**: hgkim (khg)
 - **브랜치 패턴**: `feature/KDS-XXXX_khg`, `hotfix/KDS-XXXX_khg`
+- **Jira 베이스 URL**: (비어있음 — 채우면 `/pr`에서 `<베이스 URL>/browse/KDS-XXXX` 링크를 자동 생성한다. 비어있으면 링크 없이 티켓 번호만 남긴다)
 
 ### 자주 쓰는 명령
 

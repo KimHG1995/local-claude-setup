@@ -7,6 +7,8 @@
       "Bash(md5)",
       "Bash(bash .claude/skills/refactoring/scripts/validate.sh:*)",
       "Bash(bash .claude/skills/entity-migration/scripts/check-entity-diff.sh:*)",
+      "Bash(bash .claude/skills/commit-pr/scripts/collect-pr-context.sh:*)",
+      "Bash(gh pr create:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)"
