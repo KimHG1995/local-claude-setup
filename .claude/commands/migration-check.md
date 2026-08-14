@@ -3,7 +3,7 @@
 
 ## 분석 절차
 
-1. `git diff HEAD -- src/entities/` 로 Entity 변경사항 확인
+1. `git diff HEAD -- src/entities/` 로 Entity 변경사항 확인 (또는 `bash .claude/skills/entity-migration/scripts/check-entity-diff.sh` 로 컬럼/관계/인덱스 변경 후보를 빠르게 훑기)
 2. 변경이 없으면 "Entity 변경 없음, 마이그레이션 불필요" 출력 후 종료
 
 ## 보고 형식
@@ -22,13 +22,11 @@
 
 ## 변경 유형 판단 기준
 
-| 변경 내용                                 | 마이그레이션                      |
-| ----------------------------------------- | --------------------------------- |
-| 컬럼 추가 (nullable)                      | 필요                              |
-| 컬럼 추가 (NOT NULL, default 없음)        | 필요 — 기존 행 기본값 필수        |
-| 컬럼 삭제                                 | 필요 — FK 참조 여부 확인          |
-| 타입 변경                                 | 필요 — 데이터 손실 위험           |
-| nullable 변경                             | 필요 — 기존 NULL 데이터 유무 확인 |
-| 인덱스 추가/삭제                          | 필요                              |
-| 관계(Relation) 추가                       | 필요 — FK 제약 확인               |
-| 주석·`@ApiProperty`·`@Column` 옵션만 변경 | 불필요                            |
+세부 판단 기준(생성 규칙·안티패턴·검증 항목)은 `entity-migration` 스킬로 옮겼다 — 여기서 표를 다시 베끼지 않는다.
+
+- [`.claude/skills/entity-migration/SKILL.md`](../skills/entity-migration/SKILL.md) — 유형 분류표
+- [`references/add-column.md`](../skills/entity-migration/references/add-column.md) — 컬럼 추가
+- [`references/drop-or-type-change.md`](../skills/entity-migration/references/drop-or-type-change.md) — 컬럼 삭제·타입 변경·nullable 변경
+- [`references/relation-and-index.md`](../skills/entity-migration/references/relation-and-index.md) — 관계·인덱스
+
+이 커맨드는 위 기준으로 **분류하고 보고만** 한다. 세부 근거가 필요하면 해당 참조 파일을 연다.
