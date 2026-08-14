@@ -5,6 +5,8 @@
       "Bash(yarn test:*)",
       "Bash(yarn lint:*)",
       "Bash(md5)",
+      "Bash(bash .claude/skills/refactoring/scripts/validate.sh:*)",
+      "Bash(bash .claude/skills/entity-migration/scripts/check-entity-diff.sh:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)"

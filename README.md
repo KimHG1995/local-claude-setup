@@ -1,5 +1,7 @@
 # local-claude-setup
 
+[한국어](README.md) · [English](README.en.md)
+
 로컬에서 Claude Code를 쓸 때 자주 필요한 규칙, 작업 흐름, 안전장치들을 `.claude/` 아래에 정리해둔 저장소
 
 기본 아이디어는 두 군데에서 영향을 받았으며
@@ -71,18 +73,30 @@ Claude Code를 계속 쓰다 보면 문제는 비슷하게 반복된다.
 
 ### 3. `.claude/skills/`
 
-여기는 커맨드라기보다 **작업 판단 기준을 담은 참조 가이드**다.
+여기는 커맨드라기보다 **작업 판단 기준을 담은, 유형별로만 필요한 만큼 불러 쓰는 가이드**다. 왜 이 모양으로 짰는지는 아래 "스킬 구조를 어떻게 다시 짰나" 절에 따로 정리했다.
 
-현재는 리팩토링을 두 단계로 나눴다.
+모든 스킬은 같은 골격을 쓴다.
 
-- `refactoring-phase1.md`
-  - 프론트엔드 영향 없이 바로 적용 가능한 변경
-  - DTO 분리, Swagger 정리, 기존 검증의 class-validator 이동 같은 작업
-- `refactoring-phase2.md`
-  - 프론트 협의가 필요한 응답 구조 표준화
-  - Filter / Interceptor / wrapped / paged 응답 도입 같은 작업
+```text
+skills/<이름>/
+├─ SKILL.md              ← 트리거 설명 + 유형 판단만 (내용은 안 담음)
+├─ references/
+│  └─ <유형>.md           ← 생성 규칙 + Anti-pattern + Template + Example
+└─ scripts/
+   └─ <검증>.sh
+```
 
-이 분리를 둔 이유는 단순하다. 리팩토링이라는 이름으로 한 번에 밀어붙이면, 실제로는 "안전한 정리"와 "계약 변경"이 쉽게 뒤섞인다. 그래서 이런 기준이 있으면 AI도 **수정 범위를 괜히 키우지 않고** 움직이기 좋다.
+현재 스킬은 둘이다.
+
+- **`refactoring/`** — 리팩토링을 두 단계로 나눈다.
+  - `references/phase1-safe-changes.md` — 프론트엔드 영향 없이 바로 적용 가능한 변경 (DTO 분리, Swagger 정리, 기존 검증의 class-validator 이동)
+  - `references/phase2-contract-changes.md` — 프론트 협의가 필요한 응답 구조 표준화 (Filter / Interceptor / wrapped / paged 응답)
+  - `scripts/validate.sh` — typecheck → (선택) 모듈 테스트 → lint
+- **`entity-migration/`** — Entity 변경을 위험도별로 나눈다.
+  - `references/add-column.md` / `drop-or-type-change.md` / `relation-and-index.md`
+  - `scripts/check-entity-diff.sh` — `src/entities/` diff에서 컬럼·관계·인덱스 변경 후보를 휴리스틱으로 뽑아 보여줌
+
+리팩토링을 두 단계로 나눈 이유는 단순하다. "리팩토링"이라는 이름으로 한 번에 밀어붙이면, 실제로는 "안전한 정리"와 "계약 변경"이 쉽게 뒤섞인다. Entity 변경도 마찬가지다 — 컬럼 추가와 컬럼 삭제·타입 변경은 위험도 자체가 다르다. 유형별로 갈라두면 AI도 **수정 범위를 괜히 키우지 않고**, 지금 유형에 필요한 참조 파일 하나만 읽고 움직인다.
 
 ---
 
@@ -110,6 +124,40 @@ Claude Code를 계속 쓰다 보면 문제는 비슷하게 반복된다.
 - 로컬 작업에서 자주 쓰는 검증만 열어둠
 
 이 파일도 단순 설정 파일이라기보다, **"AI가 어디까지 자동으로 움직여도 되는가"를 정하는 정책 파일**에 가깝다.
+
+---
+
+## 스킬 구조를 어떻게 다시 짰나 (토큰 최적화 관점)
+
+전에는 `skills/refactoring-phase1.md`, `refactoring-phase2.md`처럼 파일을 그냥 나열해뒀다. 스킬을 더 늘리려고 보니 이 방식에 걸리는 게 두 가지 있었다.
+
+1. **실제 Claude Code Skill이 아니었다.** `name`/`description` frontmatter를 가진 `SKILL.md`가 아니라 그냥 마크다운 문서였다. 그래서 "1단계 리팩토링 가이드 참고해서 진행해줘"처럼 내가 직접 이름을 불러줘야만 작동했다 — 관련 상황이 와도 스스로 트리거되지 않는다.
+2. **유형이 늘어날수록 파일 하나가 계속 길어진다.** 리팩토링 2종에 Entity 마이그레이션 3종을 더하면, 그중 실제로 필요한 건 한 유형뿐인데 스킬을 열 때마다 관련 없는 유형의 규칙·템플릿·예시까지 전부 컨텍스트에 얹힌다.
+
+그래서 Claude Code Skills가 원래 지원하는 3단계 로딩 구조를 그대로 따르기로 했다.
+
+1. **메타데이터(`name` + `description`)** — 모든 스킬이 항상 컨텍스트에 얹혀 있다. 한두 줄이라 비용이 거의 없고, 이걸로 Claude가 "지금 이 스킬이 필요한 상황인가"를 스스로 판단한다.
+2. **`SKILL.md` 본문** — 스킬이 실제로 트리거될 때만 로딩된다. 여기엔 유형 판단 기준만 두고, 규칙·템플릿·예시 같은 무거운 내용은 넣지 않는다.
+3. **`references/*.md`** — `SKILL.md`가 유형을 정한 다음, 그 유형 파일 **하나만** Read로 불러온다. 나머지 유형 파일은 아예 컨텍스트에 올라오지 않는다.
+
+이 구조가 좋은 이유는, 스킬이 다뤄야 하는 유형이 늘어나도(리팩토링 2종 → +Entity 마이그레이션 3종) 한 번 트리거될 때 드는 비용은 거의 그대로라는 점이다. `references/`에 파일을 추가하는 건 사실상 공짜에 가깝다 — `SKILL.md`의 판단 표에 한 줄 추가하는 게 전부다.
+
+반대로 `.claude/commands/`는 손대지 않았다. 커맨드는 원래도 `/명령어`로 명시적으로 불러야만 로딩되는 구조라 이미 lazy-load다. 여기에 SKILL.md 패턴을 얹을 이유가 없었다.
+
+각 `references/*.md`는 전부 같은 순서로 통일했다 — **생성 규칙 → Anti-pattern → Template → Example → 검증**. 규칙만 있으면 "왜 안 되는지"가 빠지고, 예시만 있으면 "다른 케이스엔 어떻게 적용하는지"가 빠진다. 이 다섯을 한 세트로 묶어야 참조 파일 하나만 읽어도 판단부터 구현, 검증까지 끝난다. 검증은 사람이 실행 결과를 다시 설명할 필요 없게, 실제로 돌아가는 스크립트(`scripts/*.sh`)로 만들어뒀다.
+
+스킬을 만드는 방식 자체(frontmatter는 `name`/`description`뿐, description이 곧 트리거니까 실제로 쓸 표현을 그대로 적는다, 다음 스킬로 넘기는 건 본문에 이름만 적으면 된다)는 Anthropic의 `skill-creator` 컨벤션을 따랐다.
+
+> 참고로 개인 설계 메모 `claude-code-orchestration.md`에는 이보다 큰 그림 — plan → auto → ship → review 스킬 체인으로 계획 확정부터 draft PR까지 자율로 진행하는 구조 — 가 정리돼 있다. 이번엔 그 메모에서 **스킬을 어떻게 짜야 하는지에 대한 컨벤션만** 가져왔고, 체인 자체는 아직 옮기지 않았다. 세션 Task 목록 연동, 승인 게이트, 서브에이전트 위임 규율까지 들어가는 더 큰 작업이라 별도로 다룰 만하다고 봤다.
+
+### 새 스킬을 추가한다면
+
+이 골격을 그대로 복사해서 채우면 된다.
+
+1. `SKILL.md` 작성 — `description`에 실제로 쓸 트리거 표현을 넣고, 본문엔 유형 판단 표만 둔다.
+2. 유형별로 `references/<유형>.md`를 하나씩 — 생성 규칙 / Anti-pattern / Template / Example / 검증.
+3. 필요하면 `scripts/`에 검증 스크립트를 추가한다.
+4. 기존 커맨드가 같은 판단 기준을 쓰고 있었다면, 표를 복사하지 말고 스킬 쪽을 가리키게 바꾼다 (`migration-check.md`에 적용한 방식 — 같은 표가 두 곳에 있으면 둘 중 하나는 반드시 낡는다).
 
 ---
 
@@ -169,14 +217,15 @@ Claude Code를 계속 쓰다 보면 문제는 비슷하게 반복된다.
 - `/pr-review` — 현재 브랜치 전체를 체크리스트로 리뷰하기
 - `/commit` — 스테이징된 변경을 분석해 커밋 메시지 만들기
 
-### 3. 리팩토링은 가이드 문서를 직접 참조한다
+### 3. 스킬은 알아서 트리거되거나, 직접 불러서 쓴다
 
-예시:
+`skills/`는 실제 Claude Code Skill이라 `description`에 걸리는 상황(리팩토링, Entity 수정 등)이면 따로 부르지 않아도 스스로 트리거된다. 물론 명시적으로 불러도 된다:
 
-- "1단계 리팩토링 가이드 참고해서 진행해줘"
+- "1단계 리팩토링 기준으로 진행해줘"
 - "2단계 리팩토링 기준으로 응답 구조까지 정리해줘"
+- "이 Entity 변경, 마이그레이션 필요한지 봐줘" (Entity 파일을 건드리면 이 말 없이도 `entity-migration`이 먼저 반응한다)
 
-즉, `skills/`는 명령어라기보다 **판단 모드를 바꾸는 가이드**처럼 쓴다.
+즉, `skills/`는 명령어라기보다 **판단 모드를 바꾸는 가이드**다. 다만 `/명령어`처럼 매번 이름을 불러야 하는 건 아니라는 점이 커맨드와 다르다.
 
 ### 4. 수정 뒤에는 훅이 최소 검증을 자동으로 건다
 
@@ -218,8 +267,21 @@ Claude Code를 계속 쓰다 보면 문제는 비슷하게 반복된다.
 │  └─ pre-edit-branch-check.sh
 ├─ settings.local.json
 └─ skills/
-   ├─ refactoring-phase1.md
-   └─ refactoring-phase2.md
+   ├─ refactoring/
+   │  ├─ SKILL.md
+   │  ├─ references/
+   │  │  ├─ phase1-safe-changes.md
+   │  │  └─ phase2-contract-changes.md
+   │  └─ scripts/
+   │     └─ validate.sh
+   └─ entity-migration/
+      ├─ SKILL.md
+      ├─ references/
+      │  ├─ add-column.md
+      │  ├─ drop-or-type-change.md
+      │  └─ relation-and-index.md
+      └─ scripts/
+         └─ check-entity-diff.sh
 ```
 
 ---

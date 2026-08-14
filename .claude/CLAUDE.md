@@ -17,12 +17,14 @@
 | `.claude/commands/migration-check.md` | `/migration-check` | Entity 변경 마이그레이션 분석 |
 | `.claude/commands/new-feature.md`     | `/new-feature`     | 기능 구현 전 계획 수립        |
 
-### 참조 가이드 (대화 중 직접 언급해서 사용)
+### 스킬 (자동 판단 + 명시적 언급 둘 다 가능)
 
-| 파일                                   | 사용 시점                                          |
-| -------------------------------------- | -------------------------------------------------- |
-| `.claude/skills/refactoring-phase1.md` | 리팩토링 시 — 프론트 영향 없는 안전한 변경 기준    |
-| `.claude/skills/refactoring-phase2.md` | 리팩토링 시 — 프론트 협의 완료 후 응답 구조 표준화 |
+`SKILL.md`가 유형을 먼저 가르고, 해당 유형의 `references/*.md` 하나만 불러오는 구조다. 전체 내용을 다 읽을 필요는 없다.
+
+| 스킬                                | 사용 시점                                                    |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `.claude/skills/refactoring/`        | 리팩토링 시 — 1단계(안전) / 2단계(계약 변경) 유형부터 판단   |
+| `.claude/skills/entity-migration/`   | Entity 파일 수정 전후 — 마이그레이션 필요 여부·위험 판단     |
 
 ### 설정
 
