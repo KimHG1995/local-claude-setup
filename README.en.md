@@ -132,22 +132,53 @@ This is less "just a config file" and more **the policy file that decides how fa
 
 ---
 
-## How I Rebuilt the Skill Structure (a token-optimization angle)
+## How I Rebuilt the Skill Structure (with measurements)
 
-I used to just list files flat — `skills/refactoring-phase1.md`, `refactoring-phase2.md`. Once I started adding more skills, two problems showed up.
-
-1. **These weren't real Claude Code Skills.** They were plain markdown, not a `SKILL.md` with `name`/`description` frontmatter — so they only fired when I explicitly named them in chat ("use the phase-1 refactoring guide"). Nothing about them made Claude reach for them on its own.
-2. **Each file kept growing as I added types.** Two refactoring phases plus three entity-migration types means only one type is actually relevant at a time, but opening the file pulled in every other type's rules, templates, and examples along with it.
+I used to just list files flat — `skills/refactoring-phase1.md`, `refactoring-phase2.md`. Once I started adding more skills, one thing bothered me: **these weren't real Claude Code Skills.** They were plain markdown, not a `SKILL.md` with `name`/`description` frontmatter — so they only fired when I explicitly named them in chat ("use the phase-1 refactoring guide"). Nothing made Claude reach for them on its own.
 
 So I switched to the loading model Claude Code Skills already support — three layers, loaded progressively.
 
-1. **Metadata (`name` + `description`)** — always resident for every skill, one or two lines each, next to free. This is what Claude uses to decide "is this skill relevant right now."
-2. **`SKILL.md` body** — loaded only once a skill actually triggers. It holds the type-decision logic only, nothing heavier.
-3. **`references/*.md`** — once `SKILL.md` picks a type, exactly one reference file gets read. The other types never enter context at all.
+1. **Metadata (`name` + `description`)** — always resident. This is what Claude uses to decide "is this skill relevant right now."
+2. **`SKILL.md` body** — loaded only once a skill triggers. Type-decision logic only, nothing heavier.
+3. **`references/*.md`** — once a type is picked, exactly one reference file gets read.
 
-The payoff: adding more types (two refactoring phases → plus three entity-migration types) barely changes the cost of any single trigger. Growing `references/` is close to free — it's one more row in `SKILL.md`'s decision table.
+### Then I actually measured it
 
-I left `.claude/commands/` alone on purpose. Commands only load when you explicitly call `/name`, so they were already lazy-loaded — there was no reason to wrap them in the same pattern.
+I originally wrote this up as "token optimization." Having measured it, **that framing was wrong.** The reproduction script lives in the repo:
+
+```bash
+python3 tools/measure-skill-tokens.py
+```
+
+Results (tiktoken `o200k_base`, an approximation of Claude's tokenizer):
+
+| Skill | Resident (frontmatter) | Router (`SKILL.md` body) | Overhead per invocation |
+| --- | ---: | ---: | ---: |
+| `commit-pr` | 117 | 198 | +556 |
+| `refactoring` | 131 | 270 | +628 |
+| `entity-migration` | 110 | 334 | +692 |
+
+**This structure does not save tokens. It costs about 625 extra tokens per invocation.**
+
+I'd fooled myself by comparing against a "one flat file holding every type" baseline. No such file ever existed in this repo. `refactoring-phase1.md` / `phase2.md` were **already split by type**, and naming one loaded only that one. The old setup was already progressive — a human just did the routing.
+
+So the real difference isn't "did you split by type," it's **"does a human or the model do the routing,"** and that costs 625 tokens per call. What it buys:
+
+- **Auto-triggering** — you don't have to know the filename
+- **The model picks the type** — previously I had to choose phase 1 vs. phase 2 myself, and choosing wrong meant proceeding under the wrong guide
+- **The decision criteria live in a versioned file**
+
+The third is what actually matters. Running a phase-2 change (one that alters the response contract) under the phase-1 guide breaks the frontend. One such incident costs far more than 625 tokens × every invocation. The 358 resident tokens are 0.18% of a 200k context and sit in the cached system prompt.
+
+### The real problem was router bloat
+
+Right after the restructure the routers were **610 / 580 / 365** tokens. Content with nothing to do with routing (validation steps, post-completion reporting rules, general prose) was sitting in `SKILL.md` — and `refactoring/SKILL.md`'s validation section was **verbatim duplication of what both reference files already contained**.
+
+Pushing that down into the references got them to **198 / 270 / 334**. A router legitimately holds three things and no more: type-decision logic, output format needed regardless of type, and safety rails that must fire before a reference opens. The measurement script fails if a router exceeds 350 — the point is to catch it creeping back up.
+
+One claim did survive: **adding a type is nearly free** — one more line in the decision list, about 12 tokens. The old approach didn't grow in tokens either, but it grew the list of filenames a human had to remember, and the odds of picking right went down.
+
+I left `.claude/commands/` alone on purpose. Commands only load when you explicitly call `/name`, so they were already lazy-loaded — no reason to wrap them in the same pattern.
 
 Every `references/*.md` follows the same shape now: **rules → anti-pattern → template → example → validation**. Rules alone skip "why this is wrong"; an example alone skips "how this generalizes." Bundling all five means one reference file is enough to go from judgment call to implementation to verification. Validation is a real, runnable script (`scripts/*.sh`) rather than a checklist someone has to re-explain by hand every time.
 
@@ -292,6 +323,9 @@ These principles trace back to the mindset I got from `andrej-karpathy-skills`, 
       │  └─ pr-description.md
       └─ scripts/
          └─ collect-pr-context.sh
+
+tools/
+└─ measure-skill-tokens.py   ← reproduces the measurement table above
 ```
 
 ---

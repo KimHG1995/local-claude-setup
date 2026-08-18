@@ -131,3 +131,7 @@ bash .claude/skills/refactoring/scripts/validate.sh <module-path>
 ```
 
 typecheck·test·lint를 돌린 뒤에도, 이 단계는 **스테이지 환경에서 클라이언트와의 통합 테스트**가 실질적인 완료 조건이다. 스크립트 통과만으로 완료로 보고하지 않는다.
+
+## 완료 후
+
+적용한 유형과 검증 스크립트 결과를 한 줄로 요약해 보고한다. 통합 테스트가 아직이면 "미완료"로 명시한다.
