@@ -2,6 +2,8 @@
 
 `refactoring` 스킬에서 1단계로 판단됐을 때만 읽는다. 응답 형식은 바뀌지 않는다는 전제 위에서만 아래 항목을 적용한다.
 
+기능 구현·버그 수정과 **함께 자연스럽게** 적용하는 것이지, 리팩토링 자체가 목적인 별도 작업을 임의로 벌이지 않는다. 범위를 넓히려면 먼저 확인받는다.
+
 ## 생성 규칙
 
 1. **Swagger 데코레이터는 `@ApiEndpoint`로 통일한다.** 레거시 `@ApiOperation` + `@ApiResponse` 조합을 새로 추가하지 않는다.
@@ -110,3 +112,7 @@ bash .claude/skills/refactoring/scripts/validate.sh <module-path>
 ```
 
 내부적으로 `yarn typecheck` → `yarn test <module-path>`(생략 가능) → `yarn lint` 순서로 실행하고, 하나라도 실패하면 로그를 남기고 비정상 종료한다.
+
+## 완료 후
+
+적용한 유형과 검증 스크립트 결과를 한 줄로 요약해 보고한다. 2단계 대상을 발견했지만 이번에 적용하지 않았다면 그것도 함께 알린다.
