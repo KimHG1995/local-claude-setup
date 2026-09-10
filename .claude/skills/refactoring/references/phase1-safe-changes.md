@@ -2,7 +2,7 @@
 
 `refactoring` 스킬에서 1단계로 판단됐을 때만 읽는다. 응답 형식은 바뀌지 않는다는 전제 위에서만 아래 항목을 적용한다.
 
-기능 구현·버그 수정과 **함께 자연스럽게** 적용하는 것이지, 리팩토링 자체가 목적인 별도 작업을 임의로 벌이지 않는다. 범위를 넓히려면 먼저 확인받는다.
+기능 구현, 버그 수정과 **함께 자연스럽게** 적용하는 것이지, 리팩토링 자체가 목적인 별도 작업을 임의로 벌이지 않는다. 범위를 넓히려면 먼저 확인받는다.
 
 ## 생성 규칙
 
@@ -15,7 +15,7 @@
 ## Anti-pattern
 
 - ❌ 검증 로직이 없던 필드에 `class-validator`를 새로 추가하고 "그냥 안전한 리팩토링"이라고 부르는 것 — 400 응답이 새로 생기는 순간 계약 변경이다.
-- ❌ DTO 분리를 하면서 필드명·타입까지 같이 바꾸는 것 — 분리와 재설계를 한 커밋에 섞으면 리뷰에서 무엇이 실제 동작 변경인지 구분할 수 없다.
+- ❌ DTO 분리를 하면서 필드명, 타입까지 같이 바꾸는 것 — 분리와 재설계를 한 커밋에 섞으면 리뷰에서 무엇이 실제 동작 변경인지 구분할 수 없다.
 - ❌ "하는 김에" 옆 엔드포인트까지 `@ApiEndpoint`로 정리하는 것 — 수정 대상 모듈 범위를 벗어난 정리는 1단계 규칙이 아니라 범위 위반이다.
 
 ## Template
@@ -95,7 +95,7 @@ export type SomeStatus = (typeof SomeStatus)[keyof typeof SomeStatus];
 
 ## Example
 
-`notice` 모듈에서 레거시 `@ApiOperation`/`@ApiResponse`를 `@ApiEndpoint`로 옮기고, `NoticeEntity`를 직접 반환하던 응답을 `NoticeResponse` DTO + Mapper로 분리한 커밋이 참고 사례다. 응답 JSON 구조(필드명·중첩 구조)는 이전과 동일했고, 타입 선언과 Swagger 문서만 정리됐다.
+`notice` 모듈에서 레거시 `@ApiOperation`/`@ApiResponse`를 `@ApiEndpoint`로 옮기고, `NoticeEntity`를 직접 반환하던 응답을 `NoticeResponse` DTO + Mapper로 분리한 커밋이 참고 사례다. 응답 JSON 구조(필드명, 중첩 구조)는 이전과 동일했고, 타입 선언과 Swagger 문서만 정리됐다.
 
 ## 제외 항목 (2단계로 분리)
 

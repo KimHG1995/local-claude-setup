@@ -1,79 +1,58 @@
-현재 브랜치의 변경사항을 아래 체크리스트 기준으로 리뷰하라.
-`git diff master...HEAD` 로 전체 변경 파일을 먼저 파악한 후, 파일별로 검토한다.
+현재 브랜치의 변경사항을 리뷰하라.
 
-## 아키텍처 규칙 (coderabbit.yaml 기준)
+## 1. 대상 파악
 
-### Controller
+```bash
+git diff <base>...HEAD --stat
+```
 
-- [ ] HTTP 입출력만 담당하는가? (비즈니스 로직 없음)
-- [ ] Request는 DTO + class-validator로 검증하는가?
-- [ ] Response는 Entity 직접 반환이 아닌 Response DTO인가?
-- [ ] `@ApiEndpoint` 데코레이터를 사용하는가? (레거시 `@ApiOperation` + `@ApiResponse` 조합 금지)
+`<base>`를 임의로 잡지 않는다. 확실하지 않으면 묻는다.
 
-### Service
+**삭제된 줄만 따로 모아 한 번 더 본다.** 각 삭제가 요청 범위 안인지, 그 코드를 부르던 곳이 남아 있는지 확인한다. 추가된 줄은 읽히지만 삭제된 줄은 훑을 때 눈에 걸리지 않는다.
 
-- [ ] Repository 결과(Entity)를 받아 Mapper로 DTO 변환을 담당하는가?
-- [ ] 포함/제외 정책 결정이 Service에서 이루어지는가?
-- [ ] Repository에 직접 DTO를 전달하지 않는가?
+## 2. 규칙 대조는 위임한다
 
-### Repository
+레이어 경계, 네이밍, 타입, 주석 규칙은 `rules/`가 SSOT다. **여기서 체크리스트를 다시 베끼지 않는다** — 같은 표가 두 곳에 있으면 둘 중 하나는 반드시 낡는다.
 
-- [ ] TypeORM 0.2.x 기준 API만 사용하는가? (DataSource 0.3+ 금지)
-- [ ] 반환 타입이 Entity / Entity[] / [Entity[], number]인가? (DTO 반환 금지)
-- [ ] 트랜잭션 방식이 혼용되지 않는가?
+diff에 코드 파일이 있으면 `rules-check` agent를 부른다. 대상 diff와 기준 branch를 지정한다(worktree면 절대경로).
 
-### DTO
+- 대조 기준: [`.claude/rules/nestjs.md`](../rules/nestjs.md), [`code-quality.md`](../rules/code-quality.md), [`minimal-coding.md`](../rules/minimal-coding.md)
+- agent는 **위반 목록만** 돌려준다. 고치지 않고 버그도 찾지 않는다.
+- 대조하지 못한 파일이 있다고 답하면 그 이름과 사유를 리뷰 결과의 「확인하지 못한 것」에 적는다.
 
-- [ ] Entity를 Swagger `@ApiResponse` type으로 직접 사용하지 않는가?
-- [ ] Request DTO에 `class-validator` 데코레이터가 붙어 있는가?
-- [ ] 외부에서 DTO import 시 barrel export(`./dto`)를 통하는가?
+## 3. agent가 보지 않는 것을 본다
 
-### Mapper
+`rules-check`는 규칙 대조만 한다. 아래는 이 커맨드가 직접 본다.
 
-- [ ] Mapper 내부에 비즈니스 정책 결정 로직이 없는가?
-- [ ] Service에서 옵션을 결정하여 Mapper에 인자로 전달하는가?
+### 리팩토링 단계가 섞이지 않았는가
 
-## 점진적 리팩토링 단계 확인
+- [ ] 1단계(형식 유지)와 2단계(응답 계약 변경)가 한 커밋에 섞이지 않았는가?
+- [ ] `class-validator`나 ValidationPipe를 **새로** 추가했다면, 기존에 이미 검증하던 엔드포인트인가? 검증이 없던 곳에 추가하면 통과하던 요청이 400이 되어 계약 변경이다.
+- [ ] 2단계 변경이 있으면 프론트 협의가 전제됐는가?
 
-- [ ] 1단계(DTO/Swagger) 변경만 포함하는가?
-- [ ] class-validator / ValidationPipe를 **새로** 추가한 경우, 기존에 이미 검증하던 엔드포인트인가? (기존 검증 없는 곳에 신규 추가 시 프론트 영향 발생)
-- [ ] 2단계(StandardErrorFilter/ResponseTransformInterceptor) 변경이 포함된 경우, 프론트 협의가 전제되었는가?
+판단 기준은 [`refactoring` 스킬](../skills/refactoring/SKILL.md)이 가른다.
 
-## JSDoc (Controller · Service만 적용)
+### 범위
 
-- [ ] Controller public 메서드에 JSDoc이 있는가?
-- [ ] Service public 메서드에 JSDoc이 있는가?
-- [ ] JSDoc이 메서드명이 이미 말하는 내용을 반복하지 않는가? ("~를 조회한다" 형태 금지)
-- [ ] 비자명한 제약·부작용·정책만 기술하고 있는가?
-- [ ] Repository 메서드에 JSDoc이 추가되지 않았는가? (불필요)
+- [ ] 수정 범위가 요청된 모듈/API로 한정됐는가?
+- [ ] DB 스키마, 인증, 배포 변경이 섞였으면 별도 작업으로 분리됐는가?
+- [ ] Entity 변경이 있으면 마이그레이션 필요 여부가 보고됐는가? ([`entity-migration` 스킬](../skills/entity-migration/SKILL.md))
 
-## 함수명 네이밍
+### 동작
 
-- [ ] Controller 메서드가 `getList` / `getOne` / `create` / `update` / `delete` 규칙을 따르는가?
-- [ ] Service 메서드 접두사가 의미에 맞게 쓰였는가? (`get` vs `find`, `create` vs `add`, `delete` vs `remove`)
-- [ ] `doXxx`, `handleXxx`(이벤트 외), `manageXxx`, `getXxxData` 같은 안티패턴이 없는가?
-- [ ] 리네이밍이 있는 경우, 호출하는 Controller/Service도 함께 수정되었는가?
+- [ ] 변경된 동작을 실제로 구동해 확인했는가? 확인하지 못했으면 그 항목이 명시됐는가?
 
-## TypeScript 규칙
+## 4. 출력 형식
 
-- [ ] `any` 타입 사용이 없는가?
-- [ ] 모든 변수·파라미터·반환값에 명시적 타입이 선언되었는가?
-- [ ] `@ts-ignore` / `@ts-expect-error` 사용이 없는가?
-
-## 일반 품질
-
-- [ ] 한글 비즈니스 용어가 보존되었는가?
-- [ ] 에러 메시지가 한글로 작성되었는가?
-- [ ] 수정 범위가 요청된 모듈/API로 한정되었는가? (전역 변경 없음)
-- [ ] DB 스키마/인증/배포 변경이 포함된 경우 별도 작업으로 분리되었는가?
-
-## 리뷰 출력 형식
-
-각 파일에 대해:
+파일마다 이렇게 적는다.
 
 1. **파일명** — 변경 요약 한 줄
-2. 통과한 항목: ✅
-3. 문제 항목: ❌ + 구체적 설명 + 수정 제안
-4. 경고 항목: ⚠️ + 맥락 설명
+2. 통과: ✅
+3. 문제: ❌ + 구체적 설명 + 수정 제안
+4. 경고: ⚠️ + 맥락
 
-마지막에 전체 요약: 블로킹 이슈 / 권고 사항 / 승인 여부
+마지막에 세 가지를 적는다.
+
+- 블로킹 이슈 / 권고 사항 / 승인 여부
+- **확인하지 못한 것** — 대조하지 못한 파일, 구동해 보지 못한 동작. 비어 있으면 비었다고 적는다.
+- **리뷰 결과를 동작 확인의 근거로 쓰지 않는다.** "지적 없음"을 검증 항목에 적지 않는다. 리뷰는 결함을 찾는 수단이지 동작을 확인하는 수단이 아니다.

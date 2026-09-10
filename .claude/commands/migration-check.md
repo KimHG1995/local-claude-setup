@@ -1,5 +1,5 @@
 현재 변경된 Entity 파일을 분석하고 마이그레이션이 필요한 변경사항을 정리해서 보고하라.
-마이그레이션 파일 생성·실행은 하지 않는다.
+마이그레이션 파일 생성과 실행은 하지 않는다.
 
 ## 분석 절차
 
@@ -22,11 +22,11 @@
 
 ## 변경 유형 판단 기준
 
-세부 판단 기준(생성 규칙·안티패턴·검증 항목)은 `entity-migration` 스킬로 옮겼다 — 여기서 표를 다시 베끼지 않는다.
+세부 판단 기준(생성 규칙, 안티패턴, 검증 항목)은 `entity-migration` 스킬로 옮겼다 — 여기서 표를 다시 베끼지 않는다.
 
 - [`.claude/skills/entity-migration/SKILL.md`](../skills/entity-migration/SKILL.md) — 유형 분류표
 - [`references/add-column.md`](../skills/entity-migration/references/add-column.md) — 컬럼 추가
-- [`references/drop-or-type-change.md`](../skills/entity-migration/references/drop-or-type-change.md) — 컬럼 삭제·타입 변경·nullable 변경
-- [`references/relation-and-index.md`](../skills/entity-migration/references/relation-and-index.md) — 관계·인덱스
+- [`references/drop-or-type-change.md`](../skills/entity-migration/references/drop-or-type-change.md) — 컬럼 삭제, 타입 변경, nullable 변경
+- [`references/relation-and-index.md`](../skills/entity-migration/references/relation-and-index.md) — 관계, 인덱스
 
 이 커맨드는 위 기준으로 **분류하고 보고만** 한다. 세부 근거가 필요하면 해당 참조 파일을 연다.
