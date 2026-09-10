@@ -2,7 +2,7 @@
 
 이 파일은 `AGENTS.md`와 루트 `CLAUDE.md`를 **보완**한다.
 공용 규칙과 충돌하면 공용 문서(`AGENTS.md` → `CLAUDE.md`)를 우선한다.
-이 파일은 로컬 워크플로우·개인 컨텍스트만 담당하며, `.claude*` gitignore로 로컬 전용이다.
+이 파일은 로컬 워크플로우, 개인 컨텍스트만 담당하며, `.claude*` gitignore로 로컬 전용이다.
 
 ## 이 파일의 역할과 관련 파일
 
@@ -12,11 +12,24 @@
 
 | 파일                                  | 커맨드             | 역할                          |
 | ------------------------------------- | ------------------ | ----------------------------- |
-| `.claude/commands/commit.md`          | `/commit`          | 커밋 메시지 초안·실행         |
-| `.claude/commands/pr.md`              | `/pr`              | draft PR 생성 (Jira 연동·커밋 목록·수정내역 포함) |
+| `.claude/commands/commit.md`          | `/commit`          | 커밋 메시지 초안과 실행        |
+| `.claude/commands/pr.md`              | `/pr`              | draft PR 생성 (Jira 연동, 커밋 목록, 수정내역 포함) |
 | `.claude/commands/pr-review.md`       | `/pr-review`       | PR 체크리스트 리뷰            |
 | `.claude/commands/migration-check.md` | `/migration-check` | Entity 변경 마이그레이션 분석 |
 | `.claude/commands/new-feature.md`     | `/new-feature`     | 기능 구현 전 계획 수립        |
+
+### 판단 기준 (`rules/`)
+
+절차가 아니라 늘 참인 판단 기준이다. `paths`가 없으면 매 세션 상시 로드되고, 있으면 매칭 파일을 **`Read` 도구로 읽을 때만** 로드된다.
+
+| 파일 | 로드 시점 | 담당 |
+| --- | --- | --- |
+| `.claude/rules/minimal-coding.md` | 상시 | 무엇을 만들지 정하는 자세, 신뢰경계 |
+| `.claude/rules/git.md` | 상시 | 커밋, branch, push, 승인 게이트 |
+| `.claude/rules/code-quality.md` | `**/*.ts` Read | 테스트 동어반복 금지, 검증 가능한 단위, 주석, 타입 |
+| `.claude/rules/nestjs.md` | `src/**/*.ts` Read | 레이어 경계, 검증, 응답, 영속화, 외부 호출, 네이밍 |
+
+**`paths`가 걸린 rules는 `Write`, `Edit`, Bash로 읽을 때는 로드되지 않고 subagent에도 상속되지 않는다.** 코드를 쓰는 위임에는 위임문에 "이 rules 파일을 직접 Read하라"를 넣는다. 새 파일만 만드는 작업은 규칙이 하나도 적용되지 않은 채 끝날 수 있다.
 
 ### 스킬 (자동 판단 + 명시적 언급 둘 다 가능)
 
@@ -25,14 +38,28 @@
 | 스킬                                | 사용 시점                                                    |
 | ------------------------------------ | ------------------------------------------------------------- |
 | `.claude/skills/refactoring/`        | 리팩토링 시 — 1단계(안전) / 2단계(계약 변경) 유형부터 판단   |
-| `.claude/skills/entity-migration/`   | Entity 파일 수정 전후 — 마이그레이션 필요 여부·위험 판단     |
-| `.claude/skills/commit-pr/`          | 커밋 메시지 작성 시 / PR 생성 시 — 둘 중 해당하는 유형만 판단 |
+| `.claude/skills/entity-migration/`   | Entity 파일 수정 전후 — 마이그레이션 필요 여부와 위험 판단   |
+| `.claude/skills/commit-pr/`          | 커밋 메시지 작성 시 / PR 생성 시 — 형식은 이력에서 뽑는다    |
+
+### Agent (`agents/`)
+
+fresh context가 목적 자체인 절차만 둔다. agent 정의는 매 세션 system prompt에 실려서 비용이 든다.
+
+| Agent | 사용 시점 |
+| --- | --- |
+| `.claude/agents/rules-check.md` | 코드 파일이 든 diff를 리뷰하거나 PR로 올리기 전, `rules/` 대조 |
+
+### 채택 기록
+
+| 파일 | 역할 |
+| --- | --- |
+| `ADOPTED.md` | 프롬프트에 무엇을 왜 넣고 뺐는지. 규칙을 고칠 때만 읽는다 |
 
 ### 설정
 
 | 파일                          | 역할                                                  |
 | ----------------------------- | ----------------------------------------------------- |
-| `.claude/settings.local.json` | 훅·권한 설정 (DB 접속은 `yarn tunnel:*` 후 별도 진행) |
+| `.claude/settings.local.json` | 훅과 권한 설정 (DB 접속은 `yarn tunnel:*` 후 별도 진행) |
 
 ---
 
@@ -49,14 +76,14 @@
 ### 테스트 원칙
 
 - 버그 수정 — 재현 케이스를 먼저 확인하고, 관련 테스트가 있으면 통과 여부 검증
-- 신규 기능 — 해당 모듈에 기존 테스트가 있으면 함께 추가·수정 고려
+- 신규 기능 — 해당 모듈에 기존 테스트가 있으면 함께 추가하거나 수정하는 것을 고려
 
 ### 작업 전 반드시 물어볼 것
 
-- **Entity 필드 추가·삭제·타입 변경** — 마이그레이션 누락 시 운영 장애
-- **`app.module.ts` 변경** — 모듈 등록 누락·중복
-- **`src/common/` 인터셉터·필터·파이프 변경** — 전 모듈 영향
-- **`auths/` 모듈 변경** — 보안·토큰 포맷 영향, 별도 작업 분리 필요
+- **Entity 필드 추가, 삭제, 타입 변경** — 마이그레이션 누락 시 운영 장애
+- **`app.module.ts` 변경** — 모듈 등록 누락, 중복
+- **`src/common/` 인터셉터, 필터, 파이프 변경** — 전 모듈 영향
+- **`auths/` 모듈 변경** — 보안, 토큰 포맷 영향, 별도 작업 분리 필요
 - **`src/migrations/` 직접 수정** — 이미 적용된 마이그레이션은 롤백 불가
 
 ### 절대 금지 (명시적 요청 없으면)
@@ -64,7 +91,7 @@
 - `git commit`, `git push`
 - PR 생성(`gh pr create`) — 생성하더라도 항상 draft, Open 전환은 사람이 함
 - `.env*` 파일 수정
-- `migrations/` 파일 직접 편집·삭제
+- `migrations/` 파일 직접 편집이나 삭제
 - 전역 리팩토링 (수정 대상 모듈 범위 밖 변경)
 
 ### 기본 생략, 필요 시만 실행

@@ -14,7 +14,7 @@
 
 ## 생성 규칙
 
-1. **1단계가 먼저 끝나 있어야 한다.** DTO/Mapper 분리 없이 바로 Filter·Interceptor를 얹지 않는다.
+1. **1단계가 먼저 끝나 있어야 한다.** DTO/Mapper 분리 없이 바로 Filter, Interceptor를 얹지 않는다.
 2. **컨트롤러 단위로 opt-in한다.** 모듈 전체에 전역 적용하지 않고, 협의가 끝난 컨트롤러에만 `@UseFilters`/`@UseInterceptors`를 건다.
 3. **`StandardErrorFilter`는 Module `providers`에 등록한다.** 등록을 빠뜨리면 필터가 조용히 무시된다.
 4. **페이지네이션 응답은 `buildPageData` 유틸을 거친다.** 직접 `{ items, page, ... }` 객체를 조립하지 않는다 — 필드명이 모듈마다 갈라지는 원인이다.
@@ -130,7 +130,7 @@ throw new CommonException({
 bash .claude/skills/refactoring/scripts/validate.sh <module-path>
 ```
 
-typecheck·test·lint를 돌린 뒤에도, 이 단계는 **스테이지 환경에서 클라이언트와의 통합 테스트**가 실질적인 완료 조건이다. 스크립트 통과만으로 완료로 보고하지 않는다.
+typecheck, test, lint를 돌린 뒤에도, 이 단계는 **스테이지 환경에서 클라이언트와의 통합 테스트**가 실질적인 완료 조건이다. 스크립트 통과만으로 완료로 보고하지 않는다.
 
 ## 완료 후
 
