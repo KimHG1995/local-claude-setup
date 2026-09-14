@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/pre-edit-branch-check.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit-branch-check.sh\""
           }
         ]
       }
@@ -32,7 +32,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-edit-typecheck.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-typecheck.sh\""
           }
         ]
       },
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-edit-test.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit-test.sh\""
           }
         ]
       }

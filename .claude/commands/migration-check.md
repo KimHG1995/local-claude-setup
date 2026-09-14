@@ -3,8 +3,10 @@
 
 ## 분석 절차
 
-1. `git diff HEAD -- src/entities/` 로 Entity 변경사항 확인 (또는 `bash .claude/skills/entity-migration/scripts/check-entity-diff.sh` 로 컬럼/관계/인덱스 변경 후보를 빠르게 훑기)
-2. 변경이 없으면 "Entity 변경 없음, 마이그레이션 불필요" 출력 후 종료
+1. `bash .claude/skills/entity-migration/scripts/check-entity-diff.sh`로 추적 파일의 staged/unstaged 변경과 미추적 `src/entities/` 파일을 확인한다. 최초 커밋 전 저장소도 지원한다. 스크립트는 파일을 스테이징하지 않는다.
+2. 기커밋 변경은 `--base <기준 커밋/브랜치>`로 기준→현재 작업 트리를 비교한다. PR의 변경만 보려면 확인한 공통 조상 커밋을 기준으로 사용한다. 제안 단계는 요청한 변경 내용도 함께 분석한다.
+3. 빈 결과는 **선택한 비교 범위에 Entity 변경 없음**으로 보고한다. 제안, 기커밋 변경 또는 실제 DB 상태까지 검증한 것이 아니므로 곧바로 마이그레이션 불필요로 결론 내리지 않는다. exit `1`은 분석 실패로 보고하고 근거를 보완한다.
+4. 출력은 데코레이터 문자열 기반 후보다. 전체 diff와 새 파일을 읽어 import, 여러 줄 옵션, Entity 생성/삭제 등 후보에 안 잡히는 변경도 판단한다. ignored 파일은 기본 조회에서 제외되므로 요청 대상이면 별도 확인한다.
 
 ## 보고 형식
 
