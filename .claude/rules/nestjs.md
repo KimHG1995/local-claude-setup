@@ -37,7 +37,7 @@ paths:
 - GET 쿼리는 `@StandardCommonValidationPipe()`, POST body는 `@StandardStrictValidationPipe()`를 쓴다.
 - 쿼리 파라미터 boolean은 `@Transform`과 `boolean | string` 타입을 유지한다.
 
-**검증이 없던 엔드포인트에 검증을 새로 추가하는 것은 계약 변경이다.** 지금까지 통과하던 요청이 400이 된다. 이건 안전한 정리가 아니므로 `refactoring` 스킬의 2단계로 다룬다.
+**요청의 허용, 거부, 필수값, 형변환, 기본값 또는 오류 응답이 바뀌면 계약 변경이다.** 검증이 없던 곳에 추가하거나 기존 검증을 데코레이터로 옮길 때 모두 전후 입력을 비교한다. 동등성을 확인한 이동만 1단계이고, 나머지는 `refactoring` 스킬의 2단계로 다룬다.
 
 ## 응답
 

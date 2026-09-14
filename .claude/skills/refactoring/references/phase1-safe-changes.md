@@ -1,6 +1,6 @@
 # 1단계 — 안전한 정리 (프론트엔드 영향 없음)
 
-`refactoring` 스킬에서 1단계로 판단됐을 때만 읽는다. 응답 형식은 바뀌지 않는다는 전제 위에서만 아래 항목을 적용한다.
+`refactoring` 스킬에서 1단계로 판단됐을 때만 읽는다. 요청의 허용, 거부, 형변환, 기본값, HTTP 상태와 응답 형식이 유지된다는 전제 위에서만 아래 항목을 적용한다.
 
 기능 구현, 버그 수정과 **함께 자연스럽게** 적용하는 것이지, 리팩토링 자체가 목적인 별도 작업을 임의로 벌이지 않는다. 범위를 넓히려면 먼저 확인받는다.
 
@@ -8,8 +8,8 @@
 
 1. **Swagger 데코레이터는 `@ApiEndpoint`로 통일한다.** 레거시 `@ApiOperation` + `@ApiResponse` 조합을 새로 추가하지 않는다.
 2. **Entity를 Swagger response type으로 직접 쓰지 않는다.** `dto/` 폴더에 Response DTO를 분리하고 Mapper로 변환한다.
-3. **Request DTO에 `class-validator`를 추가하는 것은 해당 엔드포인트에 이미 검증 로직이 있을 때만 허용한다.** (수동 `if` 검증, 기존 `validateDTO` 호출 등) 검증이 아예 없던 엔드포인트에 새로 추가하면 지금까지 통과하던 요청이 400이 되어 그 자체로 프론트 영향이 생긴다 — 이건 1단계가 아니라 2단계다.
-4. **`@StandardCommonValidationPipe` / `@StandardStrictValidationPipe` 전환도 3번과 같은 전제를 따른다.** 기존 검증을 파이프로 옮기는 것만 1단계다.
+3. **검증 이동은 기존 검증과 동등한 경우에만 1단계다.** 기존 검증이 있다는 사실만으로 충분하지 않다. 누락, `null`, `0`, 소수, 문자열 숫자, 정상값의 허용, 거부와 변환 결과를 전후 비교한다. 오류 상태, 본문까지 유지되는지 확인한다. 새 검증, 필수값 완화, 정수 제한, 자동 형변환은 2단계다.
+4. **`@StandardCommonValidationPipe` / `@StandardStrictValidationPipe` 전환도 3번과 같은 전제를 따른다.** `transform`, `whitelist`, 누락 필드 처리와 오류 변환 설정까지 확인한다. 동등성을 입증하지 못하면 기존 검증을 유지한다.
 5. **Enum은 모듈 범위 안에서만 `as const`로 옮긴다.** 다른 모듈이 참조하는 공유 enum은 범위 밖이다.
 
 ## Anti-pattern
@@ -49,26 +49,25 @@ src/modules/{module}/
     index.ts   ← barrel export
 ```
 
-### 기존 수동 검증 → class-validator 이동
+### 기존 검증의 동등성 확인
 
 ```ts
-// ❌ Before — 서비스에서 수동 검증
-if (!payload.id) throw new HttpException('id 필수', HttpStatus.BAD_REQUEST);
-if (typeof payload.count !== 'number') throw ...;
-
-// ✅ After — 같은 규칙을 DTO 데코레이터로
-export class SomeRequestDto {
-  @IsNotEmpty()
-  @Type(() => Number)
-  @IsInt()
-  id: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  count?: number;
+// 기존 검증: 숫자 타입이면 소수도 허용하고, 누락과 null은 거부한다.
+if (typeof payload.count !== 'number') {
+  throw new HttpException('count는 숫자여야 합니다', HttpStatus.BAD_REQUEST);
 }
 ```
+
+이를 `@IsOptional()` + `@Type(() => Number)` + `@IsInt()`로 옮기면 다음처럼 달라진다. `@Type` 변환이 실행되는 파이프를 전제로 한다.
+
+| count 입력 | 기존 검증 | 변경안 | 분류 |
+| --- | --- | --- | --- |
+| 누락 / `null` | 거부 | 허용 | 필수값 완화 |
+| `1.5` | 허용 | 거부 | 정수 제한 |
+| `'2'` | 거부 | 숫자 `2`로 변환 후 허용 | 입력 형변환 |
+| `0` / `2` | 허용 | 허용 | 이 사례만으로 동등성을 입증할 수 없음 |
+
+**이 변경안은 2단계다.** 1단계 작업에서는 기존 검증을 유지하고, 검증 이동이 필요하면 위 경계값과 기존 오류 응답을 고정한 회귀 테스트로 동등성을 먼저 확인한다. 특정 데코레이터 조합을 모든 수동 검증의 대체물로 사용하지 않는다.
 
 쿼리 파라미터 boolean은 `@Transform` + `boolean | string` 타입을 유지한다 (ValidationPipe가 없는 경로이므로).
 

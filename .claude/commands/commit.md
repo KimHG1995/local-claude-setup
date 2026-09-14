@@ -9,10 +9,10 @@
 1. 컨벤션 확정:
 
    ```bash
-   bash .claude/skills/commit-pr/scripts/derive-git-convention.sh 5
+   bash .claude/skills/commit-pr/scripts/derive-git-convention.sh --mode commit 5
    ```
 
-   exit `2`면 표시된 미정 항목을 먼저 사용자에게 묻는다. 추측으로 채우지 않는다.
+   exit `2`는 이력 근거 부족이다. 명시된 규칙이나 기존 답변으로 정해진 항목은 유지하고 남은 미정 항목만 묻는다. exit `1`은 조회/입력 실패이며 이력 없음으로 취급하지 않는다.
 
 2. 위 참조 파일의 절차에 따라 티켓 번호 확인, 변경사항 파악, 분리 여부 판단을 거쳐 초안을 만든다.
 3. 초안을 보여 주고 "이 메시지로 커밋할까요"를 확인받는다. 수정 요청이 있으면 반영 후 재확인.

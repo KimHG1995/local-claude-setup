@@ -30,6 +30,10 @@ Rather than fixing this with one clever prompt, **splitting the rules into role-
 
 Copy `.claude/` into the target project root, then adapt the items below. **Delete what you don't use.** If keeping things becomes the default, it turns into a pile of rules that no longer fit.
 
+If `.claude/` already exists, compare it first and merge only the selected files. The template uses Bash, Git, `jq`, and Python 3.9 or later; project checks require Yarn and the project's `typecheck`/`test` scripts. Hook commands resolve from `${CLAUDE_PROJECT_DIR}`. Configure the receiving project's ignore rules if this setup is intended to remain local.
+
+If the project shares instructions through `AGENTS.md`, import it with `@AGENTS.md` from the root `CLAUDE.md`. Merely naming the file or stating precedence does not load it. After setup, inspect `/context` for loaded instructions and `/hooks` for registered hooks.
+
 ### Must change
 
 | File | What to change |
@@ -88,13 +92,13 @@ skills/<name>/
 
 Three are included. Treat all of them as examples.
 
-- **`refactoring/`** — separates cleanup with no frontend impact (phase 1) from response-contract changes (phase 2)
+- **`refactoring/`** — separates changes preserving request and response contracts (phase 1) from changes to accepted inputs, conversions, responses, or other contracts (phase 2)
 - **`entity-migration/`** — separates Entity changes by risk. Adding a column and dropping one aren't the same risk
-- **`commit-pr/`** — derives commit and PR format **from the repository's own history.** If the history is thin, it asks rather than guesses
+- **`commit-pr/`** — prioritizes explicit conventions and PR templates, then fills gaps **from history for the requested task.** It asks only about unresolved items with insufficient evidence
 
-Splitting by type means only the one relevant reference gets read. That said, **this structure does not save tokens.** Measured, it costs about 660 extra tokens per invocation. What it buys is auto-triggering, and having the model pick the type instead of a human. Running a phase-2 change under the phase-1 guide breaks the frontend, and one such incident costs more. Details are in [`ADOPTED.md`](ADOPTED.md) and `tools/measure-skill-tokens.py`.
+Splitting by type means only the relevant references are read. The intended benefits are automatic triggering and explicit classification. Token savings depend on the comparison baseline and the references actually loaded. The earlier figure of about 660 extra tokens per invocation was a static `o200k_base` estimate for one revision, not measured Claude usage or billing.
 
-One operating rule survives. **A `SKILL.md` body stays under 350 tokens.** A router holds the type decision, the output format needed every time, and safety rails that must fire before a reference opens. Nothing else. The measurement script enforces the cap.
+**A `SKILL.md` body stays under 350 `o200k_base` tokens.** A router holds the type decision, the output format needed every time, and checks needed before opening references. The tool enforces this cap and separately reports `CLAUDE.md`, unconditional rules, estimated skill metadata, and invocation bodies and references. Check actual loading and usage through `/context` and runtime usage reports. The [validation contract](docs/validation-contract.md) documents scope and commands.
 
 ---
 
@@ -111,7 +115,7 @@ What doesn't count is also written down: "it's a safety net," "seems good to hav
 
 It reduces to one question: **does removing this line actually cause a problem?**
 
-**Verifying (B) happens on the receiving side.** There's no code in this repo, so nothing can be tested here. After applying it to a project, use `claude --safe-mode` to get a state with no rules, give it a task that would provoke the mistake, and see whether the mistake happens. If it doesn't, that rule isn't needed in that project, so delete it.
+**Behavioral evaluation of (B) happens on the receiving side.** This repository regression-tests its hooks and scripts, but project-specific rules must be evaluated on representative work. Hold the code, task, model, and tool configuration constant; compare runs with only the rule under study removed against runs retaining it. Use multiple cases and repeated runs, recording failures and regressions. One run without a failure does not establish that a rule is unnecessary. `claude --safe-mode` also disables skills, hooks, MCP, memory, and other customizations, so use it to diagnose the whole setup, not to isolate one rule's effect.
 
 What went in and what came out is recorded in [`ADOPTED.md`](ADOPTED.md). It isn't always-resident and isn't `paths`-gated, so it's only read when editing prompts. It exists separately to **stop the same rule from being revived, or removed again, by someone who no longer knows why**.
 
@@ -151,6 +155,7 @@ Build out the full process and **the cost of managing the AI development process
 │  ├─ migration-check.md
 │  └─ new-feature.md
 ├─ hooks/
+│  ├─ common.sh               ← input, repository discovery, JSON feedback
 │  ├─ pre-edit-branch-check.sh
 │  ├─ post-edit-typecheck.sh
 │  └─ post-edit-test.sh
@@ -161,7 +166,9 @@ Build out the full process and **the cost of managing the AI development process
    └─ commit-pr/
 
 ADOPTED.md                    ← what went in, what came out, and why
-tools/measure-skill-tokens.py ← enforces the 350-token router cap
+docs/validation-contract.md   ← hook/helper contracts and verification scope
+tests/                        ← regression tests using temporary repositories
+tools/measure-skill-tokens.py ← inventories resident text and checks router cap
 ```
 
 ---

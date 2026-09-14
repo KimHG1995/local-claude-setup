@@ -1,12 +1,35 @@
 #!/bin/bash
-# 이 저장소의 실제 커밋/PR 이력에서 컨벤션을 뽑는다.
-# 형식을 미리 정해 두지 않고 이력에서 읽는 이유는 저장소마다 다르기 때문이다.
-# 이력이 부족하면 "미정"으로 표시한다. 미정 항목은 호출자가 사용자에게 되물어야 한다.
+# 요청 모드의 컨벤션 자료만 수집한다. 명시된 규칙/template이 이력보다 우선한다.
+# 미정 표시는 이미 정한 규칙을 취소하지 않는다. 남은 항목만 호출자가 확인한다.
 #
-# 사용: bash .claude/skills/commit-pr/scripts/derive-git-convention.sh [분석할 커밋 수]
+# 사용: derive-git-convention.sh [--mode commit|pr] [N] [--convention FILE]
+# 종료: 0 자료 확보, 2 근거 부족/혼용, 1 입력/조회 실패.
 set -uo pipefail
 
-N="${1:-5}"
+# Legacy [N] means commit only; PR callers must opt in explicitly.
+MODE=commit
+N=5
+CONVENTION=""
+SEEN_N=0
+fail() { echo "🚫 $*" >&2; exit 1; }
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --mode)
+      [[ $# -ge 2 ]] || fail "--mode 값 필요"
+      MODE="$2"; shift 2 ;;
+    --convention)
+      [[ $# -ge 2 ]] || fail "--convention 파일 필요"
+      CONVENTION="$2"; shift 2 ;;
+    *)
+      [[ "$SEEN_N" -eq 0 && "$1" =~ ^[1-9][0-9]*$ ]] || fail "표본 수는 양의 정수여야 합니다."
+      N="$1"; SEEN_N=1; shift ;;
+  esac
+done
+[[ "$MODE" == commit || "$MODE" == pr ]] || fail "--mode commit|pr만 지원합니다."
+# Resolve caller-selected files before switching to the repository root.
+if [[ -n "$CONVENTION" && "$CONVENTION" != /* ]]; then
+  CONVENTION="$PWD/$CONVENTION"
+fi
 MIN_SAMPLE=3 # 이보다 적으면 컨벤션을 확정하지 않는다
 
 # 한 항목이 이 비율 이상이면 확정한다. 저장소 첫 커밋("Initial commit")처럼
@@ -28,9 +51,69 @@ if [[ -z "$PROJECT_ROOT" ]]; then
   echo "🚫 git 저장소 루트를 찾을 수 없습니다."
   exit 1
 fi
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT" || fail "저장소 이동 실패"
 
-SUBJECTS=$(git log -n "$N" --format='%s' 2>/dev/null)
+# The caller selects an applicable convention; arbitrary repo prose is not auto-detected.
+if [[ -n "$CONVENTION" ]]; then
+  [[ -f "$CONVENTION" && -r "$CONVENTION" ]] || fail "컨벤션 파일을 읽을 수 없습니다: $CONVENTION"
+  echo "═══ 명시된 컨벤션 ($MODE): $CONVENTION ═══"
+  cat "$CONVENTION" || fail "컨벤션 파일 읽기 실패"
+  exit 0
+fi
+if [[ "$MODE" == pr ]]; then
+  for TPL in .github/pull_request_template.md .github/PULL_REQUEST_TEMPLATE.md; do
+    if [[ -f "$TPL" ]]; then
+      echo "── PR template: $TPL ──"
+      cat "$TPL" || fail "template 읽기 실패"
+      echo "template 우선. 정하지 않은 항목만 기존 지침/사용자 요청으로 보완하세요."
+      exit 0
+    fi
+  done
+  command -v gh > /dev/null 2>&1 || fail "gh CLI 없음 — PR 이력을 조회하지 못했습니다."
+  WORK=$(mktemp -d) || fail "임시 디렉터리 생성 실패"
+  trap 'rm -rf "$WORK"' EXIT
+  if ! gh pr list --state all --limit "$N" --json number,title,body > "$WORK/prs" 2> "$WORK/error"; then
+    cat "$WORK/error" >&2
+    fail "PR 조회 실패 (PR 0개라는 뜻이 아닙니다)."
+  fi
+  cat "$WORK/error" >&2
+  python3 - "$WORK/prs" <<'PRPY'
+import json
+import sys
+try:
+    with open(sys.argv[1]) as source:
+        prs = json.load(source)
+    if not isinstance(prs, list) or any(
+        not isinstance(p, dict) or not isinstance(p.get('number'), int)
+        or not isinstance(p.get('title'), str) or not isinstance(p.get('body'), str)
+        for p in prs
+    ):
+        raise ValueError('invalid PR fields')
+except (OSError, ValueError) as error:
+    print(f'PR 응답 파싱 실패: {error}', file=sys.stderr)
+    sys.exit(1)
+print('═══ PR 이력 (제목 + 본문) ═══')
+if not prs:
+    print('PR 0개 (조회 성공). 명시된 지침이 없으면 본문 구성을 사용자에게 물어보세요.')
+    sys.exit(2)
+for pr in prs:
+    print(f"#{pr['number']}  {pr['title']}\n{pr['body']}\n")
+if not any(pr['body'].strip() for pr in prs):
+    print('본문 표본 없음. 명시된 지침이 없으면 구성을 사용자에게 물어보세요.')
+    sys.exit(2)
+print('관찰 자료입니다. 본문 구성/언어가 혼용되면 미정 항목만 확인하세요.')
+PRPY
+  exit $?
+fi
+
+if git rev-parse --verify HEAD > /dev/null 2>&1; then
+  SUBJECTS=$(git log -n "$N" --format='%s') || fail "커밋 이력 조회 실패"
+else
+  REF=$(git symbolic-ref -q HEAD) || fail "HEAD 확인 실패"
+  git show-ref --verify --quiet "$REF"
+  [[ $? -eq 1 ]] || fail "HEAD 읽기 실패"
+  SUBJECTS=""
+fi
 COUNT=$(printf '%s\n' "$SUBJECTS" | grep -c . || true)
 
 echo "═══ 커밋 이력 (최근 ${COUNT}개) ═══"
@@ -43,7 +126,7 @@ echo
 
 if [[ "$COUNT" -lt "$MIN_SAMPLE" ]]; then
   echo "⚠ 표본이 ${COUNT}개뿐입니다(최소 ${MIN_SAMPLE}). 컨벤션을 확정하지 않습니다."
-  echo "  → 아래 항목을 전부 사용자에게 물어보세요."
+  echo "  → 이미 정한 항목은 유지하고, 아래 중 미정 항목만 사용자에게 물어보세요."
   echo "    1. 커밋 제목 언어 (한국어 / 영어)"
   echo "    2. type(scope) prefix 사용 여부"
   echo "    3. 티켓 번호 표기 위치와 형식"
@@ -100,7 +183,7 @@ if [[ "$TICKETED" -gt 0 ]]; then
   echo "  실제 표기:"
   printf '%s\n' "$SUBJECTS" | grep -oE '.{0,3}[A-Z]{2,}-[0-9]+.{0,2}' | sort -u | sed 's/^/    /'
 elif [[ "$COUNT" -ge "$MIN_SAMPLE" ]]; then
-  echo "  → 커밋 제목에는 티켓 번호를 넣지 않음"
+  echo "  → 이 표본에서 티켓 번호 미관찰 (금지 규칙이 아님). 명시된 규칙과 현재 티켓을 확인하세요."
 fi
 echo
 
@@ -136,50 +219,10 @@ echo "  로컬 목록:"
 git branch --format='    %(refname:short)' 2>/dev/null | head -10
 echo
 
-# ── PR ──
-echo "═══ PR 이력 ═══"
-if ! command -v gh > /dev/null 2>&1; then
-  echo "  gh CLI 없음. PR 컨벤션 미정이므로 사용자에게 물어보세요."
-  UNDETERMINED=1
-else
-  # gh 실패와 "PR이 0개"를 구분한다. 둘을 뭉치면 조회하지 못한 것을 없는 것으로 보고하게 된다.
-  PR_ERR=$(gh pr list --state all --limit "$N" --json number,title 2>&1 > /dev/null)
-  PRS=$(gh pr list --state all --limit "$N" --json number,title 2>/dev/null)
-  if [[ -n "$PR_ERR" ]]; then
-    echo "  ⚠ 조회하지 못했습니다(PR이 없다는 뜻이 아닙니다):"
-    echo "$PR_ERR" | head -2 | sed 's/^/      /'
-    echo "  → 이 저장소의 PR 호스트를 확인하고, 형식은 사용자에게 물어보세요."
-    UNDETERMINED=1
-  elif [[ -z "$PRS" || "$PRS" == "[]" ]]; then
-    echo "  PR 0개 (조회는 성공)."
-    echo "  → PR 본문 형식을 이력에서 뽑을 수 없습니다. 사용자에게 물어보세요."
-    UNDETERMINED=1
-  else
-    echo "$PRS" | python3 -c "
-import json, sys
-for p in json.load(sys.stdin):
-    print(f\"  #{p['number']}  {p['title']}\")
-" 2>/dev/null || echo "  (파싱 실패)"
-  fi
-fi
-echo
-
-# ── PR template ──
-echo "── PR template ──"
-TPL=$(ls .github/pull_request_template.md .github/PULL_REQUEST_TEMPLATE.md 2>/dev/null | head -1)
-if [[ -n "$TPL" ]]; then
-  echo "  있음: $TPL"
-  echo "  → 이 template의 섹션 구성을 그대로 따릅니다. 별도 형식을 만들지 않습니다."
-  grep -E '^#{1,3} ' "$TPL" 2>/dev/null | sed 's/^/    /'
-else
-  echo "  없음. PR 내용에 맞게 섹션을 구성합니다."
-fi
-echo
-
 echo "═══ 결론 ═══"
 if [[ "$UNDETERMINED" -eq 1 ]]; then
   echo "  ⚠ 미정 항목이 있습니다. 위에 표시된 것을 사용자에게 물어본 뒤 진행하세요."
   echo "     추측으로 채우지 않습니다."
   exit 2
 fi
-echo "  ✅ 이력에서 컨벤션을 확정했습니다. 위 관찰 결과를 그대로 따르세요."
+echo "  ✅ 이력 관찰 완료. 명시된 컨벤션이 우선이며 표본은 금지/필수 규칙이 아닙니다."

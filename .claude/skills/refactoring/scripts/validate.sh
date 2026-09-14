@@ -1,7 +1,7 @@
 #!/bin/bash
 # refactoring 스킬 공통 검증: typecheck (+ 선택적 모듈 테스트) + lint
 # 사용: bash .claude/skills/refactoring/scripts/validate.sh [module-path]
-#   module-path 생략 시 typecheck·lint만 실행한다.
+#   module-path 생략 시 typecheck, lint만 실행한다.
 set -uo pipefail
 
 MODULE_PATH="${1:-}"

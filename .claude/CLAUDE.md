@@ -4,7 +4,7 @@
 
 이 파일은 `AGENTS.md`와 루트 `CLAUDE.md`를 **보완**한다.
 공용 규칙과 충돌하면 공용 문서(`AGENTS.md` → `CLAUDE.md`)를 우선한다.
-이 파일은 로컬 워크플로우, 개인 컨텍스트만 담당하며, `.claude*` gitignore로 로컬 전용이다.
+이 파일은 로컬 워크플로우와 개인 컨텍스트를 담당한다. 대상 프로젝트에서 `.claude/`를 로컬 전용으로 쓸지는 gitignore로 직접 정한다. 공용 `AGENTS.md`는 루트 `CLAUDE.md`에서 `@AGENTS.md`로 가져와야 자동 로드된다.
 
 ## 이 파일의 역할과 관련 파일
 
@@ -35,17 +35,17 @@
 
 ### 스킬 (자동 판단 + 명시적 언급 둘 다 가능)
 
-`SKILL.md`가 유형을 먼저 가르고, 해당 유형의 `references/*.md` 하나만 불러오는 구조다. 전체 내용을 다 읽을 필요는 없다.
+`SKILL.md`가 유형을 먼저 가르고, 필요한 `references/*.md`만 불러오는 구조다. 전체 내용을 다 읽을 필요는 없다.
 
 | 스킬                                | 사용 시점                                                    |
 | ------------------------------------ | ------------------------------------------------------------- |
 | `.claude/skills/refactoring/`        | 리팩토링 시 — 1단계(안전) / 2단계(계약 변경) 유형부터 판단   |
 | `.claude/skills/entity-migration/`   | Entity 파일 수정 전후 — 마이그레이션 필요 여부와 위험 판단   |
-| `.claude/skills/commit-pr/`          | 커밋 메시지 작성 시 / PR 생성 시 — 형식은 이력에서 뽑는다    |
+| `.claude/skills/commit-pr/`          | 커밋 메시지 작성 시 / PR 생성 시 — 명시된 규칙, template 우선, 이력으로 보완 |
 
 ### Agent (`agents/`)
 
-fresh context가 목적 자체인 절차만 둔다. agent 정의는 매 세션 system prompt에 실려서 비용이 든다.
+fresh context가 목적 자체인 절차만 둔다. agent의 탐색용 메타데이터와 실행 시 읽는 본문을 구분하고, 실제 로드 비용은 런타임에서 확인한다.
 
 | Agent | 사용 시점 |
 | --- | --- |
@@ -71,9 +71,13 @@ fresh context가 목적 자체인 절차만 둔다. agent 정의는 매 세션 s
 
 | 시점                | 명령                             |
 | ------------------- | -------------------------------- |
-| `.ts` 파일 수정 후  | `yarn typecheck`                 |
+| `.ts` 파일 수정 후 (`.spec.ts`, `.d.ts` 제외) | `yarn typecheck` |
 | `.spec.ts` 수정 후  | `yarn test <해당 파일>`          |
-| Entity 파일 수정 후 | 마이그레이션 필요 여부 먼저 보고 |
+| Entity 추가, 수정 전후 | `entity-migration`으로 필요 여부 보고 (훅이 아닌 작업 절차) |
+
+자동 검사는 `Edit|Write`에 연결된 동기식 PostToolUse 훅이다. 결과는 JSON `additionalContext`로 전달하며, 실패해도 이미 적용된 편집을 되돌리지 않는다. 소스 파일 수정만으로 관련 테스트가 자동 실행되지는 않는다. 작업 완료 전에는 변경에 맞는 테스트와 검사 결과를 별도로 확인한다.
+
+PreToolUse 훅은 `main`, `master`의 `Edit|Write`만 차단한다. Bash 편집, commit, push와 다른 보호 브랜치는 이 훅의 집행 범위가 아니므로 아래 규칙과 저장소의 Git 보호 설정을 따른다.
 
 ### 테스트 원칙
 
@@ -150,7 +154,7 @@ yarn test --testPathPattern=<module>
 - [ ] 새 Service/Repository 추가 → Module `providers` 등록?
 - [ ] 새 Module 추가 → `app.module.ts` imports 등록?
 - [ ] alimtalk 발송 로직 수정 → v1/v2 모두 확인?
-- [ ] 응답 DTO 변경 → 1단계(형식 유지)인가 2단계(프론트 협의)인가?
+- [ ] DTO, 검증 변경 → 1단계(요청, 응답 계약 유지)인가 2단계(소비자 협의)인가?
 - [ ] `common/` 파일 수정 → 영향 범위 확인?
 - [ ] `yarn typecheck` 통과?
 - [ ] 의미 있는 코드 변경 → `yarn lint` 고려?

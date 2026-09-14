@@ -6,15 +6,16 @@
 
 **이 파일은 섹션 구성을 정의하지 않는다.** 아래 순서로 정한다.
 
-1. **`.github/pull_request_template.md`가 있으면 그 template의 섹션 구성을 그대로 따른다.** 별도 형식을 만들지 않는다.
-2. template이 없으면 **기존 PR에서 관찰한 구성**을 따른다.
-3. template도 없고 기존 PR도 없으면 **사용자에게 묻는다.** 아래 「기본 구성」을 후보로 제시하고 확인받는다. 확인 없이 이 구성을 확정된 것처럼 쓰지 않는다.
+1. **사용자가 지정했거나 저장소에 명시된 PR 규칙**을 우선한다. 이미 정한 내용은 이력이 없어도 다시 묻지 않는다.
+2. **PR template** (`.github/pull_request_template.md` 또는 `.github/PULL_REQUEST_TEMPLATE.md`)의 구성을 따른다. 별도 형식을 만들지 않는다.
+3. 부족한 부분만 **실제 PR 본문**에서 관찰한다. 제목이나 커밋 언어로 본문 구성, 언어를 추정하지 않는다.
+4. 남은 미정 항목만 사용자에게 묻는다. 「기본 구성」은 후보로 제시한다.
 
 ```bash
-bash .claude/skills/commit-pr/scripts/derive-git-convention.sh 5
+bash .claude/skills/commit-pr/scripts/derive-git-convention.sh --mode pr 5
 ```
 
-`PR 없음`이 나오면 3번 경로다. PR 본문 언어도 같은 스크립트의 커밋 언어 관찰을 따르되, 커밋과 PR 본문의 언어가 다를 수 있으므로 기존 PR이 없으면 이것도 함께 묻는다.
+exit `0`은 template/선택한 규칙 또는 본문 자료 확보를 뜻하며 모든 항목이 확정됐다는 뜻은 아니다. `2`는 본문 근거 부족, `1`은 조회/입력 실패다. 조회 실패는 PR 없음이 아니다. template이나 명시된 규칙으로 해결된 항목은 어느 코드에서도 되묻지 않는다. 상세 옵션: [helper 계약](helper-contract.md).
 
 ## 항상 적용하는 것
 
@@ -32,10 +33,10 @@ bash .claude/skills/commit-pr/scripts/derive-git-convention.sh 5
 ### 1. 재료 수집
 
 ```bash
-bash .claude/skills/commit-pr/scripts/derive-git-convention.sh 5
+bash .claude/skills/commit-pr/scripts/derive-git-convention.sh --mode pr 5
 ```
 
-브랜치, 티켓 번호, 커밋 목록, PR template 유무, 기존 PR을 한 번에 본다.
+이 스크립트는 PR template 또는 PR 제목, 본문을 수집한다. 브랜치와 티켓은 현재 요청 및 `git branch --show-current`로 별도 확인한다. base 확인 후 `git log <base>..HEAD`로 PR에 포함될 커밋 목록을 수집한다. template/명시된 규칙이 있으면 이력 조회는 필요하지 않다.
 
 ### 2. base 확인
 
@@ -106,7 +107,7 @@ template도 기존 PR도 없을 때 **후보로 제시할** 구성이다. 확인
 ## Anti-pattern
 
 - ❌ **template이 있는데 자기 형식으로 쓰는 것.** template이 최우선이다.
-- ❌ PR이 하나도 없는 저장소에서 형식을 확정된 것처럼 쓰는 것. 후보로 제시하고 확인받는다.
+- ❌ 명시된 규칙과 template도 없는 저장소에서 본문 이력 없이 형식을 확정하는 것. 남은 미정 항목만 확인한다.
 - ❌ 존재를 확인하지 못한 Jira 링크를 만들어 넣는 것.
 - ❌ `git diff --stat` 출력을 그대로 붙여넣고 "수정내역"이라 부르는 것.
 - ❌ "리뷰 통과"를 검증 섹션에 적는 것.
@@ -116,7 +117,7 @@ template도 기존 PR도 없을 때 **후보로 제시할** 구성이다. 확인
 ## 검증
 
 - [ ] template이 있으면 그 구성을 따랐는가?
-- [ ] template도 기존 PR도 없으면 사용자에게 확인받았는가?
+- [ ] 명시된 규칙, template, 본문 이력으로도 정해지지 않은 항목만 확인했는가?
 - [ ] 커밋이 빠짐없이 나열됐는가?
 - [ ] 검증 섹션에 실행한 명령과 출력만 있는가? 리뷰 결과가 섞이지 않았는가?
 - [ ] 미확인 항목이 "미확인"으로 명시됐는가?
