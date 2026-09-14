@@ -61,7 +61,7 @@ fresh context가 목적 자체인 절차만 둔다. agent의 탐색용 메타데
 
 | 파일                          | 역할                                                  |
 | ----------------------------- | ----------------------------------------------------- |
-| `.claude/settings.local.json` | 훅과 권한 설정 (DB 접속은 `yarn tunnel:*` 후 별도 진행) |
+| `.claude/settings.local.json` | 훅과 권한 설정. 사전 절차가 필요한 접근은 여기 적는다 |
 
 ---
 
@@ -128,17 +128,19 @@ PreToolUse 훅은 `main`, `master`의 `Edit|Write`만 차단한다. Bash 편집,
 
 ### 사용자
 
-- **담당자**: hgkim (khg)
-- **브랜치 패턴**: `feature/KDS-XXXX_khg`, `hotfix/KDS-XXXX_khg`
-- **Jira 베이스 URL**: (비어있음 — 채우면 `/pr`에서 `<베이스 URL>/browse/KDS-XXXX` 링크를 자동 생성한다. 비어있으면 링크 없이 티켓 번호만 남긴다)
+아래는 전부 플레이스홀더다. 얹을 때 그 프로젝트 값으로 채우고, 해당 없는 줄은 지운다.
+
+- **담당자**: `<이름>` (`<이니셜>`)
+- **브랜치 패턴**: `feature/<TICKET>-1234_<이니셜>`, `hotfix/<TICKET>-1234_<이니셜>`
+- **이슈 트래커 베이스 URL**: (비어있음 — 채우면 `/pr`에서 `<베이스 URL>/browse/<TICKET>-1234` 링크를 만든다. 비어있으면 링크 없이 티켓 번호만 남긴다)
 
 ### 자주 쓰는 명령
 
+프로젝트에서 실제로 쓰는 명령으로 바꾼다.
+
 ```bash
 yarn typecheck
-yarn tunnel:dev
 yarn start:dev
-yarn typeorm:run:tunnel
 yarn test --testPathPattern=<module>
 ```
 
@@ -153,7 +155,7 @@ yarn test --testPathPattern=<module>
 - [ ] Entity 수정 → 마이그레이션 필요 여부 보고?
 - [ ] 새 Service/Repository 추가 → Module `providers` 등록?
 - [ ] 새 Module 추가 → `app.module.ts` imports 등록?
-- [ ] alimtalk 발송 로직 수정 → v1/v2 모두 확인?
+- [ ] 버전이 나뉜 모듈 수정 → 모든 버전 확인? (프로젝트별 항목으로 교체)
 - [ ] DTO, 검증 변경 → 1단계(요청, 응답 계약 유지)인가 2단계(소비자 협의)인가?
 - [ ] `common/` 파일 수정 → 영향 범위 확인?
 - [ ] `yarn typecheck` 통과?

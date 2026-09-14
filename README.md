@@ -38,12 +38,14 @@ Claude Code를 계속 쓰다 보면 문제가 비슷하게 반복된다.
 
 | 파일 | 무엇을 고치나 |
 | --- | --- |
-| `CLAUDE.md` | 담당자, 브랜치 패턴, Jira URL, 자주 쓰는 명령, 모듈별 주의사항 |
+| `CLAUDE.md` | 개인화 정보가 전부 플레이스홀더다. 담당자, 브랜치 패턴, 트래커 URL, 자주 쓰는 명령, 모듈별 주의사항을 채운다 |
+| `skills/refactoring/references/*` | **아직 사내 전용 심볼이 28곳 남아 있다.** `@ApiEndpoint`, `@Standard*ValidationPipe`, `StandardErrorFilter`, `ResponseTransformInterceptor`, `buildPageData` 등은 NestJS 표준이 아니라 특정 코드베이스의 것이다. 그 프로젝트의 실제 데코레이터와 유틸로 바꾼다 |
 | `rules/nestjs.md` | **통째로 예시다.** 얹을 프로젝트의 레이어 구조와 검증 수단으로 다시 쓴다 |
 | `rules/code-quality.md` | `paths`를 그 프로젝트 확장자로. 지금은 `**/*.ts` |
 | `hooks/*.sh` | 패키지 매니저와 명령. 지금은 `yarn typecheck`, `yarn test` |
 | `settings.local.json` | 허용 명령. 필요한 것만 하나씩 연다 |
-| `commands/*.md` | 티켓 표기와 경로. 지금은 `KDS-XXXX`, `src/entities/` |
+| `commands/*.md` | 티켓 표기와 경로. 지금은 `<TICKET>-1234`, `src/entities/` |
+| `skills/commit-pr/` | **PR 이력 조회의 기본값은 GitHub + `gh`다.** 커밋 쪽은 Git만 쓰므로 호스트와 무관하다. GitLab, Bitbucket 등이면 스크립트의 gh 블록을 바꾸거나 `--convention FILE`로 규칙 파일을 넘긴다 |
 
 `rules/minimal-coding.md`와 `rules/git.md`는 스택과 무관해서 대체로 그대로 간다.
 

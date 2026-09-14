@@ -4,6 +4,11 @@
 #
 # 사용: derive-git-convention.sh [--mode commit|pr] [N] [--convention FILE]
 # 종료: 0 자료 확보, 2 근거 부족/혼용, 1 입력/조회 실패.
+#
+# 호스트 전제: PR 이력 조회의 기본값은 GitHub + `gh`다. commit 모드는 Git만 쓰므로
+# 호스트와 무관하다. GitLab, Bitbucket 등 다른 호스트에서는 아래 gh 블록을 그
+# 호스트의 CLI나 API로 바꾸거나, `--convention FILE`로 명시된 규칙 파일을 넘겨
+# 이력 조회를 건너뛴다. 조회 실패는 exit 1이라 "PR 없음"으로 오해되지 않는다.
 set -uo pipefail
 
 # Legacy [N] means commit only; PR callers must opt in explicitly.

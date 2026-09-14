@@ -38,12 +38,14 @@ If the project shares instructions through `AGENTS.md`, import it with `@AGENTS.
 
 | File | What to change |
 | --- | --- |
-| `CLAUDE.md` | owner, branch pattern, Jira URL, frequently used commands, per-module notes |
+| `CLAUDE.md` | the personalization block is all placeholders. Fill in owner, branch pattern, tracker URL, frequent commands, per-module notes |
+| `skills/refactoring/references/*` | **28 in-house symbols still remain.** `@ApiEndpoint`, `@Standard*ValidationPipe`, `StandardErrorFilter`, `ResponseTransformInterceptor`, `buildPageData` are not NestJS standard; they belong to one specific codebase. Swap them for that project's real decorators and utilities |
 | `rules/nestjs.md` | **an example in its entirety.** Rewrite it for the target project's layers and validation |
 | `rules/code-quality.md` | set `paths` to that project's extensions. Currently `**/*.ts` |
 | `hooks/*.sh` | package manager and commands. Currently `yarn typecheck`, `yarn test` |
 | `settings.local.json` | allowed commands. Open them one at a time, as needed |
-| `commands/*.md` | ticket notation and paths. Currently `KDS-XXXX`, `src/entities/` |
+| `commands/*.md` | ticket notation and paths. Currently `<TICKET>-1234`, `src/entities/` |
+| `skills/commit-pr/` | **PR history lookup defaults to GitHub + `gh`.** The commit side uses Git only, so it is host-agnostic. On GitLab, Bitbucket and others, swap the script's gh block or pass a rules file with `--convention FILE` |
 
 `rules/minimal-coding.md` and `rules/git.md` are stack-independent and mostly travel unchanged.
 
